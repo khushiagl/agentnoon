@@ -1,183 +1,202 @@
 <template>
-  <div :class="layout === 'vertical' ? 'flex flex-col items-center' : 'flex flex-col'">
-    <!-- Employee Card -->
-    <div class="relative">
-      <div
-        class="w-56 p-4 rounded shadow hover:shadow-lg transition-all"
-        :class="bgColorClass"
-      >
-        <!-- Avatar and Name -->
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-2">
-            <div
-              class="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold text-white"
-            >
-              {{ initials }}
-            </div>
-            <div>
-              <h3 class="font-medium text-sm text-white truncate max-w-[100px]">
-                {{ record.Name }}
-              </h3>
-              <p
-                v-if="record['Job Title']"
-                class="text-white/80 text-xs truncate max-w-[120px]"
-              >
-                {{ record['Job Title'] }}
-              </p>
-            </div>
-          </div>
-          <button
-            v-if="hasChildren"
-            @click="toggle"
-            class="p-1 hover:bg-white/20 rounded transition-colors"
-          >
-            <component
-              :is="isExpanded ? ChevronDown : ChevronRight"
-              class="w-4 h-4 text-white"
-            />
-          </button>
-        </div>
-
-        <!-- Cost and Stats -->
-        <div class="mt-2 space-y-1 text-xs text-gray-900">
-          <div>Descendants: {{ record.descendantCount }}</div>
-          <div class="flex flex-wrap gap-2">
-            <span class="bg-blue-50 px-2 py-0.5 rounded">Mgmt: ${{ (record.managementCost/1e6).toFixed(1) }}M</span>
-            <span class="bg-green-50 px-2 py-0.5 rounded">IC: ${{ (record.icCost/1e6).toFixed(1) }}M</span>
-            <span class="bg-gray-50 px-2 py-0.5 rounded">Total: ${{ (record.totalCost/1e6).toFixed(1) }}M</span>
-            <span class="bg-purple-50 px-2 py-0.5 rounded">Ratio: {{ mgmtRatio }}</span>
-          </div>
-          <div class="flex items-center justify-between border-t border-gray-100 pt-1 text-gray-600">
-            <div v-if="record.Department" class="flex items-center">
-              <Users class="w-3 h-3 mr-1" />
-              <span class="truncate max-w-[80px]">
-                {{ record.Department }}
-              </span>
-            </div>
-            <div v-if="record.Location" class="flex items-center">
-              <MapPin class="w-3 h-3 mr-1" />
-              <span class="truncate max-w-[70px]">
-                {{ record.Location }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Connectors -->
-      <div
-        v-if="hasChildren && isExpanded"
-        :class="layout === 'vertical' ? 'absolute border-l-2 border-gray-300 left-1/2 top-full h-8' : 'absolute border-t-2 border-gray-300 left-full top-1/2 w-5'"
-      />
-    </div>
-
-    <!-- Children -->
-    <div
-      v-if="hasChildren && isExpanded"
-      :class="layout === 'vertical' ? 'mt-8 relative' : 'ml-[76px] mt-2 relative'"
-    >
-      <!-- Horizontal connector for multiple children -->
-      <div
-        v-if="childrenNodes.length > 1"
-        :class="layout === 'vertical' ? 'absolute border-t-2 border-gray-300' : 'absolute border-l-2 border-gray-300'"
-        :style="layout === 'vertical' ? {
-          top: '-30px',
-          left: `calc(${100 / childrenNodes.length / 2}% - 1px)`,
-          right: `calc(${100 / childrenNodes.length / 2}% - 1px)`
-        } : {
-          left: '-20px',
-          top: '0',
-          height: 'calc(100% - 35px)'
-        }"
-      />
-
-      <!-- Children container -->
-      <div :class="layout === 'vertical' ? 'flex gap-8 justify-center' : 'space-y-6'">
-        <template v-for="(child, idx) in childrenNodes" :key="child.id">
-          <!-- Vertical layout child -->
-          <div v-if="layout === 'vertical'" class="relative">
-            <div
-              class="absolute border-l-2 border-gray-300"
-              style="left:50%; top:-30px; height:30px;"
-            />
-            <EmployeeNode
-              :node="child"
-              :level="level + 1"
-              :layout="layout"
-            />
-          </div>
-
-          <!-- Horizontal layout child -->
-          <li v-else class="relative mt-4">
-            <div
-              v-if="idx > 0"
-              class="absolute border-l-2 border-gray-300"
-              style="left:-20px; top:-36px; height:36px;"
-            />
-            <div
-              class="absolute border-t-2 border-gray-300"
-              style="width:20px; left:-20px; top:50%;"
-            />
-            <EmployeeNode
-              :node="child"
-              :level="level + 1"
-              :layout="layout"
-            />
-          </li>
-        </template>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { ref, computed } from 'vue';
-import { ChevronDown, ChevronRight, Users, MapPin } from 'lucide-vue-next';
-
-const props = defineProps({
-  node: { type: Object, required: true },
-  level: { type: Number, default: 0 },
-  layout: { type: String, default: 'vertical' }
-});
-
-// Local state
-const isExpanded = ref(props.level < 2);
-const toggle = () => { isExpanded.value = !isExpanded.value; };
-
-// Data mapping: point to the CSV row with precomputed fields
-const record = computed(() => props.node.data.data);
-const hasChildren = computed(() => Array.isArray(props.node.children) && props.node.children.length > 0);
-const childrenNodes = computed(() => props.node.children || []);
-
-// Management ratio
-const mgmtRatio = computed(() => {
-  if (!record.value.totalCost) return '0.00';
-  return (record.value.managementCost / record.value.totalCost).toFixed(2);
-});
-
-// Initials from Name
-const initials = computed(() => {
-  const full = record.value.Name || '';
-  return full
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .toUpperCase();
-});
-
-// Background gradient per level
-const levelColors = [
-  'from-blue-600 to-blue-700',
-  'from-purple-600 to-purple-700',
-  'from-green-600 to-green-700',
-  'from-orange-600 to-orange-700',
-  'from-red-600 to-red-700',
-  'from-indigo-600 to-indigo-700'
-];
-const bgColorClass = computed(() => `bg-gradient-to-r ${levelColors[props.level % levelColors.length]}`);
-</script>
-
-<style scoped>
-/* Add any overrides here */
-</style>
+    <div :class="layout === 'vertical' ? 'flex flex-col items-center' : 'flex flex-col'">
+      <!-- Employee Card -->
+      <div class="relative">
+        <div class="w-64 h-52 flex flex-col rounded-lg shadow hover:shadow-lg transition-all overflow-hidden">
+          <!-- Header -->
+          <div :class="`h-20 p-3 ${bgColorClass} flex-shrink-0 flex flex-col justify-center`">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-start gap-2 min-w-0 flex-1">
+                <div
+                  class="h-9 w-9 flex-shrink-0 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold text-white"
+                >
+                  {{ initials }}
+                </div>
+                <div class="min-w-0 flex-1 flex flex-col justify-center items-start">
+                  <h3 class="font-medium text-sm text-white break-words leading-tight text-left w-full">
+                    {{ record.Name }}
+                  </h3>
+                  <p
+                    v-if="record['Job Title']"
+                    class="text-white/90 text-xs break-words mt-0.5 leading-tight text-left w-full"
+                  >
+                    {{ record['Job Title'] }}
+                  </p>
+                </div>
+              </div>
   
+              <button
+                v-if="hasChildren"
+                @click="toggle"
+                class="p-1.5 hover:bg-white/20 rounded transition-colors flex items-center gap-1.5 flex-shrink-0 self-start"
+              >
+                <span class="text-white/90 text-xs font-medium">
+                  {{ record.directCount }}⁄{{ record.descendantCount }}
+                </span>
+                <component
+                  :is="isExpanded ? ChevronDown : ChevronRight"
+                  class="w-4 h-4 text-white"
+                />
+              </button>
+            </div>
+          </div>
+  
+          <!-- Body -->
+          <div class="bg-white p-3 flex-1 flex flex-col justify-between">
+            <!-- Metrics -->
+            <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-medium text-gray-600">Mgmt:</span>
+                  <span class="text-xs bg-blue-50 px-2 py-0.5 rounded-full">
+                    ${{ (record.managementCost/1e6).toFixed(1) }}M
+                  </span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-medium text-gray-600">IC:</span>
+                  <span class="text-xs bg-green-50 px-2 py-0.5 rounded-full">
+                    ${{ (record.icCost/1e6).toFixed(1) }}M
+                  </span>
+                </div>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-medium text-gray-600">Total:</span>
+                  <span class="text-xs bg-gray-50 px-2 py-0.5 rounded-full">
+                    ${{ (record.totalCost/1e6).toFixed(1) }}M
+                  </span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-medium text-gray-600">Ratio:</span>
+                  <span class="text-xs bg-purple-50 px-2 py-0.5 rounded-full">
+                    {{ mgmtRatio }}
+                  </span>
+                </div>
+              </div>
+            </div>
+  
+            <!-- Department and Location -->
+            <div class="border-t border-gray-100 pt-2 mt-2 space-y-1.5">
+              <div v-if="record.Department" class="flex items-center gap-1.5">
+                <Users class="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                <span class="text-xs text-gray-600 break-words">{{ record.Department }}</span>
+              </div>
+              <div v-if="record.Location" class="flex items-center gap-1.5">
+                <MapPin class="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                <span class="text-xs text-gray-600 break-words">{{ record.Location }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Parent connector -->
+        <div
+          v-if="hasChildren && isExpanded && layout === 'vertical'"
+          class="absolute left-1/2 top-full border-l-2 border-gray-300"
+          style="transform: translateX(-50%); height: 1rem;"
+        />
+        <div
+          v-if="hasChildren && isExpanded && layout === 'horizontal'"
+          class="absolute left-full top-1/2 border-t-2 border-gray-300"
+          style="transform: translateY(-50%); width: 1rem;"
+        />
+      </div>
+  
+      <!-- Children -->
+      <div v-if="hasChildren && isExpanded">
+        <!-- Vertical layout (unchanged) -->
+        <div
+          v-if="layout === 'vertical'"
+          class="mt-4 inline-flex items-center relative"
+        >
+          <div class="absolute top-0 left-0 right-0 border-t-2 border-gray-300" />
+          <div class="flex gap-4 pt-2">
+            <EmployeeNode
+              v-for="child in childrenNodes"
+              :key="child.id"
+              :node="child"
+              :level="level + 1"
+              :layout="layout"
+            />
+          </div>
+        </div>
+  
+        <!-- Horizontal layout (improved connectors) -->
+        <div
+          v-else
+          class="ml-4 mt-2 flex relative"
+        >
+          <!-- horizontal leg from parent -->
+          <div
+            class="absolute left-0 top-1/2 border-t-2 border-gray-300"
+            style="transform: translateY(-50%); width: 1rem;"
+          />
+          <!-- vertical spine covering exactly the span of direct children -->
+          <div
+            class="absolute left-4 top-0 bottom-0 border-l-2 border-gray-300"
+          />
+          <div class="ml-8 flex flex-col justify-start space-y-4">
+            <div
+              v-for="child in childrenNodes"
+              :key="child.id"
+              class="relative flex items-center"
+            >
+              <!-- tee connector aligned at center -->
+              <div
+                class="absolute left-0 top-1/2 border-t-2 border-gray-300"
+                style="transform: translateY(-50%); width: 1rem;"
+              />
+              <EmployeeNode
+                :node="child"
+                :level="level + 1"
+                :layout="layout"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+  
+  <script setup>
+  import { ref, computed } from 'vue';
+  import { ChevronDown, ChevronRight, Users, MapPin } from 'lucide-vue-next';
+  
+  const props = defineProps({
+    node:   { type: Object, required: true },
+    level:  { type: Number, default: 0 },
+    layout: { type: String, default: 'vertical' }
+  });
+  
+  const isExpanded   = ref(props.level < 2);
+  const toggle       = () => { isExpanded.value = !isExpanded.value; };
+  
+  const record        = computed(() => props.node.data.data);
+  const hasChildren   = computed(() => props.node.children?.length > 0);
+  const childrenNodes = computed(() => props.node.children || []);
+  
+  const mgmtRatio = computed(() => {
+    const t = record.value.totalCost;
+    return t ? (record.value.managementCost / t).toFixed(2) : '0.00';
+  });
+  
+  const initials = computed(() => {
+    const full = record.value.Name || '';
+    return full.split(' ').map(w => w[0]).join('').toUpperCase();
+  });
+  const levelColors = [
+    'from-blue-600 to-blue-700',
+    'from-purple-600 to-purple-700',
+    'from-green-600 to-green-700',
+    'from-orange-600 to-orange-700',
+    'from-red-600 to-red-700',
+    'from-indigo-600 to-indigo-700'
+  ];
+  const bgColorClass = computed(
+    () => `bg-gradient-to-r ${levelColors[props.level % levelColors.length]}`
+  );
+  </script>
+  
+  <style scoped>
+  /* no additional overrides needed */
+  </style>
