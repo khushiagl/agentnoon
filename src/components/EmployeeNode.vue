@@ -143,7 +143,7 @@ const props = defineProps({
   layout: { type: String, default: 'vertical' }
 });
 
-const isExpanded   = ref(props.level < 2);
+const isExpanded   = ref(props.level < 1);
 const toggle       = () => { isExpanded.value = !isExpanded.value; };
 
 const record        = computed(() => props.node.data.data);
@@ -165,7 +165,16 @@ const levelColors = [
   'from-green-600 to-green-700',
   'from-orange-600 to-orange-700',
   'from-red-600 to-red-700',
-  'from-indigo-600 to-indigo-700'
+  'from-indigo-600 to-indigo-700',
+  'from-teal-600 to-teal-700',
+  'from-cyan-600 to-cyan-700',
+  'from-emerald-600 to-emerald-700',
+  'from-violet-600 to-violet-700',
+  'from-fuchsia-600 to-fuchsia-700',
+  'from-rose-600 to-rose-700',
+  'from-sky-600 to-sky-700',
+  'from-amber-600 to-amber-700',
+  'from-lime-600 to-lime-700'
 ];
 const bgColorClass = computed(() => `bg-gradient-to-r ${levelColors[props.level % levelColors.length]}`);
 </script>
