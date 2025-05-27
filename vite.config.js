@@ -4,6 +4,7 @@ import vue from "@vitejs/plugin-vue";
 export default defineConfig({
   plugins: [vue()],
   server: {
-    allowedHosts: ["spdy6y-5173.csb.app"],
+    // allow _any_ Host header (disables DNS-rebind protection)
+    allowedHosts: true,
   },
 });
