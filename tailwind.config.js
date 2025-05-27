@@ -101,6 +101,15 @@ export default {
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
       },
+      borderColor: {
+        border: 'hsl(var(--border))',
+      },
+      backgroundColor: {
+        background: 'hsl(var(--background))',
+      },
+      textColor: {
+        foreground: 'hsl(var(--foreground))',
+      },
     },
   },
   plugins: [],

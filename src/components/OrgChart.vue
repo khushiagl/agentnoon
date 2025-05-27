@@ -48,12 +48,12 @@
         </button>
       </div>
 
-      <input
+      <!-- <input
         v-model="searchTerm"
         type="text"
         placeholder="Search..."
         class="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      />
+      /> -->
     </div>
 
     <!-- Chart -->
