@@ -4,21 +4,22 @@
     <!-- Controls -->
     <div class="bg-white rounded-xl shadow-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-2">
+        
         <button
           @click="layout = 'vertical'"
           :class="layout === 'vertical' ? 'bg-blue-600 text-white' : 'border border-gray-300'"
           class="px-2 py-1 rounded flex items-center gap-1 text-sm"
+          title="Show nodes stacked top-to-bottom"
         >
-          <LayoutGrid class="w-4 h-4" />
-          Family
+          <span class="text-lg">⇆</span>
         </button>
         <button
           @click="layout = 'horizontal'"
           :class="layout === 'horizontal' ? 'bg-blue-600 text-white' : 'border border-gray-300'"
           class="px-2 py-1 rounded flex items-center gap-1 text-sm"
+          title="Show nodes side-by-side"
         >
-          <LayoutList class="w-4 h-4" />
-          Horiz
+          <span class="text-lg">⇵</span>
         </button>
       </div>
 

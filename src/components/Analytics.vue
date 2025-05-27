@@ -44,8 +44,23 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
       <!-- Location Pie Chart -->
       <div class="bg-white p-4 rounded-lg shadow-sm">
-        <h3 class="text-base font-medium text-gray-900 mb-2">Cost by Location</h3>
-        <div class="h-[300px]"><canvas ref="locCanvas" class="w-full h-full"></canvas></div>
+        <div class="mb-2">
+          <h3 class="text-base font-medium text-gray-900">
+            Cost Distribution by 
+            <select v-model="pieChartDimension" class="ml-2 border rounded p-1 text-sm font-medium text-gray-900 bg-transparent">
+              <option value="Location">Location</option>
+              <option value="Department">Department</option>
+              <option value="Entity">Entity</option>
+              <option value="level">Level</option>
+            </select>
+          </h3>
+        </div>
+        <div class="flex flex-col">
+          <div class="h-[250px]"><canvas ref="locCanvas" class="w-full h-full"></canvas></div>
+          <div class="mt-2 max-h-[100px] overflow-y-auto">
+            <div id="pieLegend" class="flex flex-wrap gap-x-4 gap-y-1 justify-center"></div>
+          </div>
+        </div>
       </div>
       <!-- Performance Mixed Chart -->
       <div class="bg-white p-4 rounded-lg shadow-sm">
@@ -87,16 +102,18 @@ Chart.register(
   LineElement
 );
 
-const props = defineProps({ data: { type: Object, required: true } });
-const nodes = computed(() => props.data.root.descendants().map(d => d.data.data));
+const { data } = defineProps({ data: { type: Object, required: true } });
+const nodes = computed(() => data.root.descendants().map(d => d.data.data));
 
 // Controls
 const chartType = ref('compDist');
 const selectedMetric = ref('totalComp');
 const selectedDimension = ref('level');
+const pieChartDimension = ref('Location');
 
 // Labels
 const selectedDimensionLabel = computed(() => selectedDimension.value === 'level' ? 'Level' : selectedDimension.value);
+const pieChartDimensionLabel = computed(() => pieChartDimension.value === 'level' ? 'Level' : pieChartDimension.value);
 const selectedMetricLabel = computed(() => {
   switch (selectedMetric.value) {
     case 'headcount': return 'Headcount';
@@ -313,11 +330,10 @@ function renderMainChart() {
   }
 }
 
-onMounted(() => {
-  renderMainChart();
-
-  // Location Pie
-  const locGroups = buildGroups('Location');
+// Render pie chart based on selection
+function renderPieChart() {
+  if (locChart) locChart.destroy();
+  const locGroups = buildGroups(pieChartDimension.value);
   const lctx = locCanvas.value.getContext('2d');
   locChart = new Chart(lctx, {
     type: 'pie',
@@ -332,27 +348,50 @@ onMounted(() => {
     options: { 
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          bottom: 10
+        }
+      },
       plugins: {
         legend: {
-          position: 'right',
-          labels: {
-            padding: 20,
-            font: { size: 12 },
-            generateLabels: chart => chart.data.labels.map((label, i) => ({
-              text: `${label}: $${(chart.data.datasets[0].data[i]/1e6).toFixed(1)}M`,
-              fillStyle: chart.data.datasets[0].backgroundColor[i],
-              index: i
-            }))
-          }
+          display: false // We'll use custom legend
         },
         tooltip: {
           mode: 'nearest',
           padding: 8,
-          cornerRadius: 4
+          cornerRadius: 4,
+          callbacks: {
+            label: (context) => {
+              const value = context.raw;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return `${context.label}: $${(value/1e6).toFixed(1)}M (${percentage}%)`;
+            }
+          }
         }
       }
     }
   });
+
+  // Custom legend
+  const legendContainer = document.getElementById('pieLegend');
+  legendContainer.innerHTML = '';
+  locGroups.forEach(([label], i) => {
+    const color = `hsla(${i*360/locGroups.length},70%,50%,0.8)`;
+    const item = document.createElement('div');
+    item.className = 'flex items-center gap-1 text-sm';
+    item.innerHTML = `
+      <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
+      <span>${label}</span>
+    `;
+    legendContainer.appendChild(item);
+  });
+}
+
+onMounted(() => {
+  renderMainChart();
+  renderPieChart();
 
   // Performance Mixed
   const perfData = buildPerformanceMixed();
@@ -398,6 +437,7 @@ onMounted(() => {
 });
 
 watch([chartType, selectedMetric, selectedDimension], renderMainChart);
+watch(pieChartDimension, renderPieChart);
 </script>
 
 <style scoped>
